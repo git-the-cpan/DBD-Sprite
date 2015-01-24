@@ -328,3 +328,7 @@ Revision history for Perl extension DBD::Sprite.
 	- Added several numeric datatype names and mapped them to the existing 
 	  numeric types.
 	- Added 2 MySQL-ish functions:  CURDATE, NOW (and now).
+0.60  Fri Jan 23 2015
+	- Fixed bug that prevented "sprite_nocase" from working properly in some 
+	  cases.  Also added "o" switch to numerous unchanging regices for 
+	  optimization.

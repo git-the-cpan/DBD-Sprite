@@ -17,7 +17,7 @@ use vars qw($VERSION $err $errstr $state $sqlstate $drh $i $j $dbcnt);
 #@EXPORT = qw(
 
 #);
-$VERSION = '0.59';
+$VERSION = '0.60';
 
 # Preloaded methods go here.
 
@@ -371,14 +371,14 @@ sub prepare
 	$resptr->STORE('sprite_last_prepare_sql', $sqlstr);
 	$csr->STORE('sprite_fetchcnt', 0);
 	$csr->STORE('sprite_reslinev','');
-	$sqlstr =~ s/\\\'|\'\'/\x02\^3jSpR1tE\x02/gs; #PROTECT "\'" IN QUOTES.
-	$sqlstr =~ s/\\\"|\"\"/\x02\^4jSpR1tE\x02/gs; #PROTECT "\"" IN QUOTES.
+	$sqlstr =~ s/\\\'|\'\'/\x02\^3jSpR1tE\x02/gso; #PROTECT "\'" IN QUOTES.
+	$sqlstr =~ s/\\\"|\"\"/\x02\^4jSpR1tE\x02/gso; #PROTECT "\"" IN QUOTES.
 	$indx = 0;
 	$indx++  while ($sqlstr =~ s/([\'\"])([^\1]*?)\1/
 				$QS[$indx] = "$1$2"; "\$QS\[$indx]"/e);
 	#$sqlstr =~ /(into|from|update|table) \s*(\w+)/gi;  #CHANGED 20000831 TO NEXT LINE!
 	#$sqlstr =~ /(into|from|update|table|sequence)\s+(\w+)/is;  #CHGD. 20040305 TO NEXT.
-	$spritefid = $2  if ($sqlstr =~ /(into|from|update|table|sequence)\s+(\w+)/is);
+	$spritefid = $2  if ($sqlstr =~ /(into|from|update|table|sequence)\s+(\w+)/ios);
 	$spritefid = $1  if ($sqlstr =~ /primary_key_info\s+(\w+)/ios);
 	unless ($spritefid)   #ADDED 20061010 TO SUPPORT "select fn" (like MySQL, et al.)
 	{
@@ -398,10 +398,10 @@ sub prepare
 	#$joininfo = $1  if ($sqlstr =~ /from\s+([\w\.\, ]+)\s*(?:where|order\s+by)/is);
 	#$joininfo = $1  if (!$joininfo && $sqlstr =~ /from\s+([\w\.\, ]+)/is);
 	#LAST 2 CHGD. TO NEXT 2 20040914.
-	$joininfo = $1  if ($sqlstr =~ /from\s+([\w\.\,\s]+)\s*(?:where|order\s+by)/is);
-	$joininfo = $1  if (!$joininfo && $sqlstr =~ /from\s+([\w\.\,\s]+)/is);
+	$joininfo = $1  if ($sqlstr =~ /from\s+([\w\.\,\s]+)\s*(?:where|order\s+by)/iso);
+	$joininfo = $1  if (!$joininfo && $sqlstr =~ /from\s+([\w\.\,\s]+)/iso);
 	my @joinfids;
-	@joinfids = split(/\,\s*/, $joininfo)  if (defined $joininfo);
+	@joinfids = split(/\,\s*/o, $joininfo)  if (defined $joininfo);
 	my (@joinfid, @joinalias);
 	if ($#joinfids >= 1)
 	{
@@ -412,7 +412,7 @@ sub prepare
 		}
 		for (my $i=0;$i<=$#joinfids;$i++)
 		{
-			($joinfid[$i], $joinalias[$i]) = split(/\s+/, $joinfids[$i]);
+			($joinfid[$i], $joinalias[$i]) = split(/\s+/o, $joinfids[$i]);
 			$joinfid[$i] ||= $joinfids[$i];
 			$joinfid[$i] =~ tr/A-Z/a-z/  unless ($resptr->{sprite_attrhref}->{sprite_CaseTableNames});
 		}
@@ -496,25 +496,25 @@ sub prepare
 			$joinfid = $joinalias[$jj] ? $joinalias[$jj] : $joinfid[$jj];
 			%addfields = ();
 
-			$joinsql[$jj] =~ s/^\s+//gs;  #STRIP LEADING, TRAILING SPACES.
-			$joinsql[$jj] =~ s/\s+$//gs;
+			$joinsql[$jj] =~ s/^\s+//gso;  #STRIP LEADING, TRAILING SPACES.
+			$joinsql[$jj] =~ s/\s+$//gso;
 
 			#CONVERT ALL "jointable.fieldname" to "fieldname" & REMOVE ALL "othertables.fieldname".
 
 			$joinsql[$jj] =~ s!^\s*select(?:\s*distinct)?\s+(.+)\s+from\s+!
 					my $one = $1;
 					$one =~ s/$joinfid\.//g;
-					$one =~ s/\w+\.\w+(?:\s*\,)?//g;
-					$one =~ s/\,\s*$//;
+					$one =~ s/\w+\.\w+(?:\s*\,)?//go;
+					$one =~ s/\,\s*$//o;
 					"select $one from "
 			!eis;
 
-			$whereclause = $1  if ($joinsql[$jj] =~ s/\s+where\s+(.+)$/ /is);
+			$whereclause = $1  if ($joinsql[$jj] =~ s/\s+where\s+(.+)$/ /iso);
 #			$csr->STORE("sprite_where0", $whereclause)  unless ($jj);	
 			unless ($jj)
 			{
 				my $unprotectedWhere = $whereclause;
-				if ($whereclause =~ /\S/)
+				if ($whereclause =~ /\S/o)
 				{
 					#RESTORE QUOTED STRINGS AND ESCAPED QUOTES WITHIN THEM.
 					1 while ($unprotectedWhere =~ s/\$QS\[(\d+)\]/
@@ -522,21 +522,21 @@ sub prepare
 							my $quotechar = substr($QS[$one],0,1);
 							($quotechar.substr($QS[$one],1).$quotechar)
 					/es);
-					$unprotectedWhere =~ s/\x02\^4jSpR1tE\x02/\"\"/gs;   #UNPROTECT QUOTES WITHIN QUOTES!
-					$unprotectedWhere =~ s/\x02\^3jSpR1tE\x02/\'\'/gs;
+					$unprotectedWhere =~ s/\x02\^4jSpR1tE\x02/\"\"/gso;   #UNPROTECT QUOTES WITHIN QUOTES!
+					$unprotectedWhere =~ s/\x02\^3jSpR1tE\x02/\'\'/gso;
 				}
 				$csr->STORE("sprite_where0", $unprotectedWhere);	
 			}
 
 
 #			$whereclause =~ s/([\'\"])([^\1]*?)\1//g;   #STRIP OUT QUOTED STRINGS TO PREVENT INTERFEARANCE W/OTHER REGICES.
-			$_ = $1  if ($joinsql[$jj] =~ /select\s+(.+?)\s+from\s+/);
-			s/\s+//g;
-			@selectfields = split(/\,/, $_);
+			$_ = $1  if ($joinsql[$jj] =~ /select\s+(.+?)\s+from\s+/o);
+			s/\s+//go;
+			@selectfields = split(/\,/o, $_);
 
 			#DEAL WITH THE ORDER-BY CLAUSE, IF ANY.
 
-			if ($whereclause =~ s/\s+order\s+by\s*(.*)//is || $joinsql[$jj] =~ s/\s+order\s+by\s*(.*)//is)
+			if ($whereclause =~ s/\s+order\s+by\s*(.*)//iso || $joinsql[$jj] =~ s/\s+order\s+by\s*(.*)//iso)
 			{
 				my $ordbyclause = $1;
 				if ($jj)
@@ -551,9 +551,9 @@ sub prepare
 					$ordbyclause =~ s/(?:$joinalias[1]|$joinfid[1])\.\w+(?:\s+desc)?\s*\,?//gis;
 				}
 				$ordbyclause =~ s/\w+\.(\w+)/$1/gs;
-				$ordbyclause =~ s/\,\s*$//s;
-				$ordbyclause =~ s/^\s*\,//s;
-				$joinsql[$jj] .= " order by $ordbyclause"  if ($ordbyclause =~ /\S/);
+				$ordbyclause =~ s/\,\s*$//so;
+				$ordbyclause =~ s/^\s*\,//so;
+				$joinsql[$jj] .= " order by $ordbyclause"  if ($ordbyclause =~ /\S/o);
 			}
 			
 			#ADD ANY FIELDS IN WHERE-CLAUSE BUT NOT FETCHED (WE MUST FETCH THEM)!
@@ -592,7 +592,7 @@ outer:				foreach my $j (keys %addfields)
 					#$addthesefields .= $listprefix . $j;  #CHGD. TO NEXT 20040913
 					$addthesefields .= $listprefix . $j . ',';
 				}
-				$addthesefields =~ s/\,$//;
+				$addthesefields =~ s/\,$//o;
 				#$joinsql[$jj] =~ s/\s+from\s+/ $addthesefields from /;  #CHGD. TO NEXT IF-STMT. 20040929.
 				if ($addthesefields)
 				{
@@ -610,8 +610,8 @@ outer:				foreach my $j (keys %addfields)
 					my $quotechar = substr($QS[$one],0,1);
 					($quotechar.substr($QS[$one],1).$quotechar)
 			/es);
-			$joinsql[$jj] =~ s/\x02\^4jSpR1tE\x02/\"\"/gs;   #UNPROTECT QUOTES WITHIN QUOTES!
-			$joinsql[$jj] =~ s/\x02\^3jSpR1tE\x02/\'\'/gs;
+			$joinsql[$jj] =~ s/\x02\^4jSpR1tE\x02/\"\"/gso;   #UNPROTECT QUOTES WITHIN QUOTES!
+			$joinsql[$jj] =~ s/\x02\^3jSpR1tE\x02/\'\'/gso;
 			$csr->STORE("sprite_joinstmt$jj", $joinsql[$jj]);	
 		}
 		$csr->STORE('sprite_joinparams', []);
@@ -630,7 +630,7 @@ outer:				foreach my $j (keys %addfields)
 	
 	$csr->STORE('sprite_params', []);
 	$num_of_params = ($sqlstr =~ tr/\?//);
-	$sqlstr =~ s/\x02\^2jSpR1tE\x02/\?/gs;
+	$sqlstr =~ s/\x02\^2jSpR1tE\x02/\?/gso;
 	$csr->STORE('NUM_OF_PARAMS', $num_of_params);	
 	$sqlstr = $joinsql[0]  if ($joinsql[0]);
 
@@ -642,8 +642,8 @@ outer:				foreach my $j (keys %addfields)
 	/es);
 	#$sqlstr =~ s/\x02\^3jSpR1tE\x02/\"\"/gs;   #BUGFIX: CHGD NEXT 2 TO FOLLOWING 2 20050429.
 	#$sqlstr =~ s/\x02\^2jSpR1tE\x02/\'\'/gs;
-	$sqlstr =~ s/\x02\^4jSpR1tE\x02/\"\"/gs;   #UNPROTECT QUOTES WITHIN QUOTES!
-	$sqlstr =~ s/\x02\^3jSpR1tE\x02/\'\'/gs;
+	$sqlstr =~ s/\x02\^4jSpR1tE\x02/\"\"/gso;   #UNPROTECT QUOTES WITHIN QUOTES!
+	$sqlstr =~ s/\x02\^3jSpR1tE\x02/\'\'/gso;
 	$csr->STORE('sprite_statement', $sqlstr);
 	return ($csr);
 }
@@ -713,7 +713,7 @@ sub STORE
 		$dbh->{AutoCommit} = $val;
 		return 1;
 	}
-	if ($attr =~ /^sprite/)
+	if ($attr =~ /^sprite/o)
 	{
 		# Handle only our private attributes here
 		# Note that we could trigger arbitrary actions.
@@ -729,7 +729,7 @@ sub FETCH
 {
 	my($dbh, $attr) = @_;
 	if ($attr eq 'AutoCommit') { return $dbh->{AutoCommit}; }
-	if ($attr =~ /^sprite_/)
+	if ($attr =~ /^sprite_/o)
 	{
 		# Handle only our private attributes here
 		# Note that we could trigger arbitrary actions.
@@ -917,8 +917,8 @@ sub bind_param
 	{
 		my $dbh = $sth->{Database};
 		$val = $dbh->quote($val, $type);
-		$val =~ s/^\'//;
-		$val =~ s/\'$//;
+		$val =~ s/^\'//o;
+		$val =~ s/\'$//o;
 	}
 	my $params = $sth->FETCH('sprite_params');
 	$params->[$pNum-1] = $val;
@@ -936,7 +936,7 @@ sub execute
 	my @ocolnames;
 	for (my $i=0;$i<=$#{$params};$i++)  #ADDED 20000303  FIX QUOTE PROBLEM WITH BINDS.
 	{
-		$params->[$i] =~ s/\'/\'\'/g;
+		$params->[$i] =~ s/\'/\'\'/go;
 	}
 	my $numParam = $sth->FETCH('NUM_OF_PARAMS');
 
@@ -950,14 +950,14 @@ sub execute
 	#my $sqlstr = $sth->{'Statement'};   #CHGD. TO NEXT 20040205 TO PERMIT JOINS.
 	my $sqlstr = $sth->FETCH('sprite_statement');
 	#NEXT 8 LINES ADDED 20010911 TO FIX BUG WHEN QUOTED VALUES CONTAIN "?"s.
-	$sqlstr =~ s/\\\'/\x02\^3jSpR1tE\x02/gs;      #PROTECT ESCAPED DOUBLE-QUOTES.
-	$sqlstr =~ s/\'\'/\x02\^4jSpR1tE\x02/gs;      #PROTECT DOUBLED DOUBLE-QUOTES.
+	$sqlstr =~ s/\\\'/\x02\^3jSpR1tE\x02/gso;      #PROTECT ESCAPED DOUBLE-QUOTES.
+	$sqlstr =~ s/\'\'/\x02\^4jSpR1tE\x02/gso;      #PROTECT DOUBLED DOUBLE-QUOTES.
 	$sqlstr =~ s/\'([^\']*?)\'/
 			my ($str) = $1;
 			$str =~ s|\?|\x02\^2jSpR1tE\x02|gs;    #PROTECT QUESTION-MARKS WITHIN QUOTES.
 			"'$str'"/egs;
-	$sqlstr =~ s/\x02\^4jSpR1tE\x02/\'\'/gs;      #UNPROTECT DOUBLED DOUBLE-QUOTES.
-	$sqlstr =~ s/\x02\^3jSpR1tE\x02/\\\'/gs;      #UNPROTECT ESCAPED DOUBLE-QUOTES.
+	$sqlstr =~ s/\x02\^4jSpR1tE\x02/\'\'/gso;      #UNPROTECT DOUBLED DOUBLE-QUOTES.
+	$sqlstr =~ s/\x02\^3jSpR1tE\x02/\\\'/gso;      #UNPROTECT ESCAPED DOUBLE-QUOTES.
 
 	#CONVERT REMAINING QUESTION-MARKS TO BOUND VALUES.
 
@@ -965,10 +965,10 @@ sub execute
 #	foreach my $i (@$bindindices)
 	for (my $i = 0;  $i < $numParam;  $i++)
 	{
-		$params->[$i] =~ s/\?/\x02\^2jSpR1tE\x02/gs;   #ADDED 20001023 TO FIX BUG WHEN PARAMETER OTHER THAN LAST CONTAINS A "?"!
+		$params->[$i] =~ s/\?/\x02\^2jSpR1tE\x02/gso;   #ADDED 20001023 TO FIX BUG WHEN PARAMETER OTHER THAN LAST CONTAINS A "?"!
 		$sqlstr =~ s/\?/"'".$params->[$i]."'"/es;
 	}
-	$sqlstr =~ s/\x02\^2jSpR1tE\x02/\?/gs;     #ADDED 20001023! - UNPROTECT PROTECTED "?"s.
+	$sqlstr =~ s/\x02\^2jSpR1tE\x02/\?/gso;     #ADDED 20001023! - UNPROTECT PROTECTED "?"s.
 	my ($spriteref) = $sth->FETCH('sprite_spritedb');
 
 	#CALL JSPRITE TO DO THE SQL!
@@ -986,7 +986,7 @@ sub execute
 		$retval = $resv[0];
 		my $dB = $sth->{Database};
 		#if ($dB->FETCH('AutoCommit') == 1 && $sth->FETCH('Statement') !~ /^\s*select/i)   #CHGD. TO NEXT 20040205 TO PERMIT JOINS.
-		if ($sth->FETCH('sprite_statement') !~ /^\s*(?:select|primary_key_info)/i)
+		if ($sth->FETCH('sprite_statement') !~ /^\s*(?:select|primary_key_info)/io)
 		{
 			if ($dB->FETCH('AutoCommit') == 1)
 			{
@@ -1002,14 +1002,14 @@ sub execute
 			$sqlstr = $sth->FETCH('sprite_joinstmt1');
 			if ($sqlstr)
 			{
-				$sqlstr =~ s/\\\'/\x02\^3jSpR1tE\x02/gs;      #PROTECT ESCAPED DOUBLE-QUOTES.
-				$sqlstr =~ s/\'\'/\x02\^4jSpR1tE\x02/gs;      #PROTECT DOUBLED DOUBLE-QUOTES.
+				$sqlstr =~ s/\\\'/\x02\^3jSpR1tE\x02/gso;      #PROTECT ESCAPED DOUBLE-QUOTES.
+				$sqlstr =~ s/\'\'/\x02\^4jSpR1tE\x02/gso;      #PROTECT DOUBLED DOUBLE-QUOTES.
 				$sqlstr =~ s/\'([^\']*?)\'/
 						my ($str) = $1;
-						$str =~ s|\?|\x02\^2jSpR1tE\x02|gs;    #PROTECT QUESTION-MARKS WITHIN QUOTES.
+						$str =~ s|\?|\x02\^2jSpR1tE\x02|gso;    #PROTECT QUESTION-MARKS WITHIN QUOTES.
 						"'$str'"/egs;
-				$sqlstr =~ s/\x02\^4jSpR1tE\x02/\'\'/gs;      #UNPROTECT DOUBLED DOUBLE-QUOTES.
-				$sqlstr =~ s/\x02\^3jSpR1tE\x02/\\\'/gs;      #UNPROTECT ESCAPED DOUBLE-QUOTES.
+				$sqlstr =~ s/\x02\^4jSpR1tE\x02/\'\'/gso;      #UNPROTECT DOUBLED DOUBLE-QUOTES.
+				$sqlstr =~ s/\x02\^3jSpR1tE\x02/\\\'/gso;      #UNPROTECT ESCAPED DOUBLE-QUOTES.
 
 				#CONVERT REMAINING QUESTION-MARKS TO BOUND VALUES.
 
@@ -1019,8 +1019,8 @@ sub execute
 #					$params->[$i] =~ s/\?/\x02\^2jSpR1tE\x02/gs;   #ADDED 20001023 TO FIX BUG WHEN PARAMETER OTHER THAN LAST CONTAINS A "?"!
 #					$sqlstr =~ s/\?/"'".$params->[$i]."'"/es;
 #				}
-				$sqlstr =~ s/\x02\^2jSpR1tE\x02/\?/gs;     #ADDED 20001023! - UNPROTECT PROTECTED "?"s.
-				my @icolnames = split(/\,/, $spriteref->{use_fields});
+				$sqlstr =~ s/\x02\^2jSpR1tE\x02/\?/gso;     #ADDED 20001023! - UNPROTECT PROTECTED "?"s.
+				my @icolnames = split(/\,/o, $spriteref->{use_fields});
 				my %icolHash;
 				for (my $i=0;$i<=$#icolnames;$i++)
 				{
@@ -1065,7 +1065,7 @@ sub execute
 					}
 				}
 				my $joinunion1 = $sth->FETCH('sprite_union1');
-				my @jcolnames = split(/\,/, $joinspriteref->{use_fields});
+				my @jcolnames = split(/\,/o, $joinspriteref->{use_fields});
 				my %jcolHash;
 				for (my $i=0;$i<=$#jcolnames;$i++)
 				{
@@ -1086,13 +1086,13 @@ sub execute
 						}
 					}
 				}
-				@ocolnames = split(/\,/, $origsql);
+				@ocolnames = split(/\,/o, $origsql);
 				my ($tbl,$fld);
 				my (@ocolwhich, %newtypes, %newlens, %newscales);
 
 I1:				for (my $i=0;$i<=$#ocolnames;$i++)
 				{
-					($tbl,$fld) = split(/\./, $ocolnames[$i]);
+					($tbl,$fld) = split(/\./o, $ocolnames[$i]);
 					$ocolnames[$i] = $fld;
 					if ($tbl eq $joinfids->[1] || $tbl eq $joinalii->[1])
 					{
@@ -1154,23 +1154,23 @@ I1:				for (my $i=0;$i<=$#ocolnames;$i++)
 				}
 
 				#NOW, BIND ALL BIND VARIABLES HERE!
-				$orig_whereclause =~ s/\\\'/\x02\^3jSpR1tE\x02/gs;      #PROTECT ESCAPED DOUBLE-QUOTES.
-				$orig_whereclause =~ s/\'\'/\x02\^4jSpR1tE\x02/gs;      #PROTECT DOUBLED DOUBLE-QUOTES.
+				$orig_whereclause =~ s/\\\'/\x02\^3jSpR1tE\x02/gso;      #PROTECT ESCAPED DOUBLE-QUOTES.
+				$orig_whereclause =~ s/\'\'/\x02\^4jSpR1tE\x02/gso;      #PROTECT DOUBLED DOUBLE-QUOTES.
 				$orig_whereclause =~ s/\'([^\']*?)\'/
 						my ($str) = $1;
-						$str =~ s|\?|\x02\^2jSpR1tE\x02|gs;    #PROTECT QUESTION-MARKS WITHIN QUOTES.
+						$str =~ s|\?|\x02\^2jSpR1tE\x02|gso;    #PROTECT QUESTION-MARKS WITHIN QUOTES.
 						"'$str'"/egs;
-				$orig_whereclause =~ s/\x02\^4jSpR1tE\x02/\'\'/gs;      #UNPROTECT DOUBLED DOUBLE-QUOTES.
-				$orig_whereclause =~ s/\x02\^3jSpR1tE\x02/\\\'/gs;      #UNPROTECT ESCAPED DOUBLE-QUOTES.
+				$orig_whereclause =~ s/\x02\^4jSpR1tE\x02/\'\'/gso;      #UNPROTECT DOUBLED DOUBLE-QUOTES.
+				$orig_whereclause =~ s/\x02\^3jSpR1tE\x02/\\\'/gso;      #UNPROTECT ESCAPED DOUBLE-QUOTES.
 
 				#CONVERT REMAINING QUESTION-MARKS TO BOUND VALUES.
 
 				for (my $i = 0;  $i < $numParam;  $i++)
 				{
-					$params->[$i] =~ s/\?/\x02\^2jSpR1tE\x02/gs;   #ADDED 20001023 TO FIX BUG WHEN PARAMETER OTHER THAN LAST CONTAINS A "?"!
+					$params->[$i] =~ s/\?/\x02\^2jSpR1tE\x02/gso;   #ADDED 20001023 TO FIX BUG WHEN PARAMETER OTHER THAN LAST CONTAINS A "?"!
 					$orig_whereclause =~ s/\?/"'".$params->[$i]."'"/es;
 				}
-				$orig_whereclause =~ s/\x02\^2jSpR1tE\x02/\?/gs;     #ADDED 20001023! - UNPROTECT PROTECTED "?"s.
+				$orig_whereclause =~ s/\x02\^2jSpR1tE\x02/\?/gso;     #ADDED 20001023! - UNPROTECT PROTECTED "?"s.
 				my $cond = $spriteref->parse_expression($orig_whereclause, $validColumnnames);
 				#$cond =~ s/\$\_\-\>\{\w+\.(\w+)\}/BASE($icolHash{$1})/g;
 				#$cond =~ s/\$\_\-\>\{\w+\.(\w+)\}/\$baseresv\-\>\[\$icolHash\{$1\}\]/g;
@@ -1191,7 +1191,7 @@ J2A:						for ($j=0;$j<$row;$j++)
 						{
 							$baserow = $resv[$j];
 							$@ = '';
-							$_ = ($cond !~ /\S/ || eval $cond);
+							$_ = ($cond !~ /\S/o || eval $cond);
 							next J2A  unless ($_);
 							for ($k=0;$k<=$#ocolnames;$k++)
 							{
@@ -1218,7 +1218,7 @@ J2B:						for ($j=0;$j<$jrow;$j++)
 						{
 							$joinrow = $joinresv[$j];
 							$@ = '';
-							$_ = ($cond !~ /\S/ || eval $cond);
+							$_ = ($cond !~ /\S/o || eval $cond);
 							next J2B  unless ($_);
 							for ($k=0;$k<=$#ocolnames;$k++)
 							{
@@ -1389,7 +1389,7 @@ sub STORE
 		$dbh->{AutoCommit} = $val;
 		return 1;
 	}
-	if ($attr =~ /^sprite/)
+	if ($attr =~ /^sprite/o)
 	{
 		# Handle only our private attributes here
 		# Note that we could trigger arbitrary actions.
@@ -1405,7 +1405,7 @@ sub FETCH
 {
 	my($dbh, $attr) = @_;
 	if ($attr eq 'AutoCommit') { return $dbh->{AutoCommit}; }
-	if ($attr =~ /^sprite_/)
+	if ($attr =~ /^sprite_/o)
 	{
 		# Handle only our private attributes here
 		# Note that we could trigger arbitrary actions.
