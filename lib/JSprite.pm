@@ -477,7 +477,7 @@ eval {require 'OraSpriteFns.pl';};
 use vars qw ($VERSION $LOCK_SH $LOCK_EX);
 ##--
 
-$JSprite::VERSION = '6.0';
+$JSprite::VERSION = '6.1';
 $JSprite::LOCK_SH = 1;
 $JSprite::LOCK_EX = 2;
 
@@ -547,6 +547,7 @@ sub new
 		sprite_Crypt => 0,  #JWT: 20020109:  Encrypt Sprite table files! FORMAT:  [[encrypt=|decrypt=][Crypt]::CBC;][[IDEA[_PP]|DES]_PP];]keystr
 		sprite_reclimit => 0, #JWT: 20010123: PERMIT LIMITING # OF RECORDS FETCHED.
 		sprite_sizelimit => 0, #JWT: 20010123: SAME AS RECLIMIT, NEEDED BOR BACKWARD COMPAT.
+		sprite_actlimit => 0, #JWT: 20010123: SAME AS RECLIMIT, NEEDED BOR BACKWARD COMPAT.
 		dbuser			=> '',      #JWT: 20011026: SAVE USER'S NAME.
 		dbname			=> '',      #JWT: 20020515: SAVE DATABASE NAME.
 		CBC			=> 0,       #JWT: 20020529: SAVE Crypt::CBC object, if encrypting!
@@ -1567,14 +1568,16 @@ MATCHED1:							++$matchcnt;
 									$rawvalue) . "'";
 						}
 						#elsif (${$self->{types}}{$jj} !~ /$NUMERICTYPES/)  #CHGD. TO NEXT 20010313.
-						elsif (!length($rawvalue) || ${$self->{types}}{$jj} !~ /$NUMERICTYPES/)
+#CHGD. TO NEXT 20160111:						elsif (!length($rawvalue) || ${$self->{types}}{$jj} !~ /$NUMERICTYPES/)
+#REASON: STOP TRAILING ZEROES IN DECIMALS FROM BEING TRUNCATED (WE ALREADY FORMATTED AT LINE 1541 ABOVE!)
+						else
 						{
 							$values->{$jj} = "'" . $rawvalue . "'";
 						}
-						else
-						{
-							$values->{$jj} = $rawvalue;
-						}
+#xNEXT 4 REMOVED 20160111:							else
+#x						{
+#x							$values->{$jj} = $rawvalue;
+#x						}
 					}
 				}
 #map { $code .= qq|\$_->{'$_'} = $values->{$_};| } @columns;  #NEXT 2 CHGD TO NEXT 34 20020125 TO SUPPORT BLOB REFERENCING.
@@ -1747,6 +1750,9 @@ MATCHED1:							++$matchcnt;
 			unshift (@$results, ['']);
 		}
 #$rowcnt = $#$results + 1;
+		#NEXT 2 ADDED 20160111 TO SUPPORT "limit #" ON QUERIES:
+		$#{$results} = $self->{sprite_actlimit} - 1
+				if ($self->{sprite_actlimit} > 0 && $#{$results} >= $self->{sprite_actlimit});
 		$rowcnt = scalar(@{$results});
 	}
 	unshift (@$results, $rowcnt);

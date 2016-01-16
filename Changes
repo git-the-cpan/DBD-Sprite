@@ -332,3 +332,15 @@ Revision history for Perl extension DBD::Sprite.
 	- Fixed bug that prevented "sprite_nocase" from working properly in some 
 	  cases.  Also added "o" switch to numerous unchanging regices for 
 	  optimization.
+6.01  Mon Jan 11 2015
+	- Fixed dropping of trailing zeroes in decimal places of scaled numbers,
+	  Changed version number to 6.01 to sync up w/version# in JSprite.pm
+	- Added support for the "LIMIT" clause in SELECT statements.  This differs 
+	  from "sprite_reclimit" option.  That option limited the fetch to the 
+	  first N records in the file UNSORTED before applying any sort.  This 
+	  was added to speed up queries used only to fetch column data 
+	  descriptors, ie. TYPE, PRECISION, etc. without need to read and process 
+	  the entire table.  This new "LIMIT" option limits the RESULTS RETURNED 
+	  to N records AFTER sorting and works as it would in other databases.  
+	  For compatibility, this can also be specified in the options hash in 
+	  PREPARE statements as "sprite_actlimit" ("actual limit").

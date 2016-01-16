@@ -1,10 +1,10 @@
 {
-   "abstract" : "unknown",
+   "abstract" : "Perl extension for DBI, providing database emmulation via flat files.  ",
    "author" : [
-      "unknown"
+      "Jim Turner"
    ],
    "dynamic_config" : 1,
-   "generated_by" : "ExtUtils::MakeMaker version 6.66, CPAN::Meta::Converter version 2.120921",
+   "generated_by" : "ExtUtils::MakeMaker version 6.98, CPAN::Meta::Converter version 2.150001",
    "license" : [
       "unknown"
    ],
@@ -31,9 +31,11 @@
          }
       },
       "runtime" : {
-         "requires" : {}
+         "requires" : {
+            "DBI" : "0"
+         }
       }
    },
    "release_status" : "stable",
-   "version" : "0.60"
+   "version" : "6.1"
 }
