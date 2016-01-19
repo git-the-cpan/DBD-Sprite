@@ -477,7 +477,7 @@ eval {require 'OraSpriteFns.pl';};
 use vars qw ($VERSION $LOCK_SH $LOCK_EX);
 ##--
 
-$JSprite::VERSION = '6.1';
+$JSprite::VERSION = '6.11';
 $JSprite::LOCK_SH = 1;
 $JSprite::LOCK_EX = 2;
 

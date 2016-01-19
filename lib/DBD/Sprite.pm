@@ -4,7 +4,7 @@ DBD::Sprite - Perl extension for DBI, providing database emmulation via flat fil
 
 =head1 AUTHOR
 
-    This module is Copyright (C) 2000 by
+    This module is Copyright (C) 2000-2015 by
 
 		Jim Turner
 		
@@ -619,7 +619,7 @@ use vars qw($VERSION $err $errstr $state $sqlstate $drh $i $j $dbcnt);
 #@EXPORT = qw(
 
 #);
-$VERSION = '6.1';
+$VERSION = '6.11';
 
 # Preloaded methods go here.
 
